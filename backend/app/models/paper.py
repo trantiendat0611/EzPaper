@@ -20,7 +20,11 @@ class Paper(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
     owner: Mapped["User"] = relationship(back_populates="papers")
-    sections: Mapped[list["PaperSection"]] = relationship(back_populates="paper", cascade="all, delete-orphan")
+    sections: Mapped[list["PaperSection"]] = relationship(
+        back_populates="paper",
+        cascade="all, delete-orphan",
+        order_by="PaperSection.order_index",
+    )
 
 
 class PaperSection(Base):
