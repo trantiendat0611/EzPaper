@@ -1,7 +1,8 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from sqlalchemy import text
+from sqlalchemy.orm import Session
 
-from app.db.session import engine
+from app.api.deps import get_db
 
 router = APIRouter()
 
@@ -12,8 +13,7 @@ def health_check() -> dict[str, str]:
 
 
 @router.get("/health/db")
-def database_health_check() -> dict[str, str]:
-    with engine.connect() as connection:
-        connection.execute(text("SELECT 1"))
+def database_health_check(db: Session = Depends(get_db)) -> dict[str, str]:
+    db.execute(text("SELECT 1"))
 
     return {"status": "ok", "database": "connected"}

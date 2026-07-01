@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { ChangeEvent, useEffect, useState } from "react";
-import { FileUp, RefreshCw } from "lucide-react";
+import { BrainCircuit, FileCheck2, FileUp, Files, RefreshCw } from "lucide-react";
 import { AppHeader } from "@/components/AppHeader";
 import { getCurrentUser, listPapers, Paper, uploadPaper, User } from "@/lib/api";
 import { getToken } from "@/lib/auth";
@@ -71,16 +71,16 @@ export default function DashboardPage() {
       <section className="container">
         <div className="toolbar">
           <div>
-            <h1 className="page-title">Papers</h1>
-            <p className="page-subtitle">Upload, extract, and review your research papers.</p>
+            <h1 className="page-title">Bài báo của bạn</h1>
+            <p className="page-subtitle">Tải lên, trích xuất và xem lại các bài báo khoa học.</p>
           </div>
           <div className="upload-row">
             <input className="file-input" type="file" accept="application/pdf,.pdf" onChange={handleFileChange} />
             <button className="button" type="button" disabled={!file || isUploading} onClick={handleUpload}>
               <FileUp size={18} />
-              {isUploading ? "Uploading..." : "Upload"}
+              {isUploading ? "Đang tải lên..." : "Tải lên"}
             </button>
-            <button className="button secondary" type="button" onClick={() => void loadData()} title="Refresh">
+            <button className="button secondary" type="button" onClick={() => void loadData()} title="Làm mới">
               <RefreshCw size={17} />
             </button>
           </div>
@@ -88,25 +88,40 @@ export default function DashboardPage() {
 
         <div className="stats-grid">
           <div className="stat">
-            <span className="stat-value">{papers.length}</span>
-            <span className="stat-label">Papers</span>
+            <span className="stat-icon">
+              <Files size={20} />
+            </span>
+            <span className="stat-body">
+              <span className="stat-value">{papers.length}</span>
+              <span className="stat-label">Bài báo</span>
+            </span>
           </div>
           <div className="stat">
-            <span className="stat-value">{extractedCount}</span>
-            <span className="stat-label">Extracted</span>
+            <span className="stat-icon">
+              <FileCheck2 size={20} />
+            </span>
+            <span className="stat-body">
+              <span className="stat-value">{extractedCount}</span>
+              <span className="stat-label">Đã trích xuất</span>
+            </span>
           </div>
           <div className="stat">
-            <span className="stat-value">{analyzedCount}</span>
-            <span className="stat-label">Analyzed</span>
+            <span className="stat-icon">
+              <BrainCircuit size={20} />
+            </span>
+            <span className="stat-body">
+              <span className="stat-value">{analyzedCount}</span>
+              <span className="stat-label">Đã phân tích</span>
+            </span>
           </div>
         </div>
 
         {error ? <div className="error">{error}</div> : null}
 
         {isLoading ? (
-          <div className="empty-state">Loading...</div>
+          <div className="empty-state">Đang tải...</div>
         ) : papers.length === 0 ? (
-          <div className="empty-state">No papers yet. Choose a PDF and upload it to start.</div>
+          <div className="empty-state">Chưa có bài báo nào. Chọn một file PDF để bắt đầu.</div>
         ) : (
           <div className="grid">
             {papers.map((paper) => (

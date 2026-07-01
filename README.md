@@ -117,15 +117,19 @@ DELETE /papers/{paper_id}
 After upload, EzPaper extracts text from text-based PDFs and stores detected sections in `paper_sections`.
 The current analyzer is a local heuristic MVP that fills `summary_vi` and `explanation_vi`; it is designed to be replaced by an AI provider later.
 
-Optional OpenAI-backed analysis:
+Optional AI-backed analysis (Gemini or OpenAI):
 
 ```txt
 AI_PROVIDER=auto
+GEMINI_API_KEY=your_api_key_here
+GEMINI_MODEL=gemini-2.5-flash
 OPENAI_API_KEY=your_api_key_here
 OPENAI_MODEL=gpt-5.5
 ```
 
-When `OPENAI_API_KEY` is empty, EzPaper keeps using the local analyzer.
+Set `AI_PROVIDER` to `gemini` or `openai` to force a provider, or leave it as `auto` to prefer
+Gemini, then OpenAI, then fall back to the local analyzer based on which API key is set.
+When neither key is set, EzPaper keeps using the local analyzer.
 After changing `.env`, restart the FastAPI server.
 
 AI diagnostics:

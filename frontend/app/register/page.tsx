@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
-import { UserPlus } from "lucide-react";
+import { BookOpenText, FolderHeart, Sparkles, UserPlus } from "lucide-react";
 import { loginUser, registerUser } from "@/lib/api";
 
 export default function RegisterPage() {
@@ -33,12 +33,17 @@ export default function RegisterPage() {
   return (
     <main className="auth-shell">
       <section className="auth-panel">
-        <h1 className="brand">EzPaper</h1>
-        <p className="page-subtitle">Create your reader workspace</p>
+        <h1 className="brand">
+          <span className="brand-mark">
+            <BookOpenText size={18} />
+          </span>
+          EzPaper
+        </h1>
+        <p className="page-subtitle">Tạo không gian đọc báo khoa học của riêng bạn.</p>
         <form className="form" onSubmit={handleSubmit}>
           {error ? <div className="error">{error}</div> : null}
           <div className="field">
-            <label htmlFor="fullName">Full name</label>
+            <label htmlFor="fullName">Họ và tên</label>
             <input id="fullName" value={fullName} onChange={(event) => setFullName(event.target.value)} />
           </div>
           <div className="field">
@@ -46,7 +51,7 @@ export default function RegisterPage() {
             <input id="email" type="email" value={email} onChange={(event) => setEmail(event.target.value)} required />
           </div>
           <div className="field">
-            <label htmlFor="password">Password</label>
+            <label htmlFor="password">Mật khẩu</label>
             <input
               id="password"
               type="password"
@@ -59,19 +64,39 @@ export default function RegisterPage() {
           </div>
           <button className="button" type="submit" disabled={isSubmitting}>
             <UserPlus size={18} />
-            Create account
+            {isSubmitting ? "Đang tạo tài khoản..." : "Tạo tài khoản"}
           </button>
           <p className="meta">
-            Already have an account? <Link className="text-link" href="/login">Sign in</Link>
+            Đã có tài khoản? <Link className="text-link" href="/login">Đăng nhập</Link>
           </p>
         </form>
       </section>
       <section className="auth-visual">
         <div className="auth-copy">
-          <h2 className="page-title">EzPaper</h2>
+          <h2 className="page-title">Xây thư viện bài báo của riêng bạn</h2>
           <p className="page-subtitle">
-            Build a personal library of papers with structured sections and Vietnamese reading notes.
+            Lưu trữ bài báo, tự động tách phần nội dung và ghi chú giải thích tiếng Việt cho từng phần.
           </p>
+          <div className="auth-feature-list">
+            <div className="auth-feature">
+              <span className="auth-feature-icon">
+                <Sparkles size={18} />
+              </span>
+              <span className="auth-feature-text">Phân tích bằng AI, dễ hiểu cho người mới</span>
+            </div>
+            <div className="auth-feature">
+              <span className="auth-feature-icon">
+                <FolderHeart size={18} />
+              </span>
+              <span className="auth-feature-text">Thư viện cá nhân, sắp xếp gọn gàng</span>
+            </div>
+            <div className="auth-feature">
+              <span className="auth-feature-icon">
+                <BookOpenText size={18} />
+              </span>
+              <span className="auth-feature-text">Đọc theo từng phần: tóm tắt, giải thích, nguyên văn</span>
+            </div>
+          </div>
         </div>
       </section>
     </main>

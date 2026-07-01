@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { LogOut } from "lucide-react";
+import { BookOpenText, LogOut } from "lucide-react";
 import { clearToken } from "@/lib/auth";
 
 type AppHeaderProps = {
@@ -18,12 +18,17 @@ export function AppHeader({ email }: AppHeaderProps) {
 
   return (
     <header className="topbar">
-      <a className="brand" href="/dashboard">EzPaper</a>
+      <a className="brand" href="/dashboard">
+        <span className="brand-mark">
+          <BookOpenText size={18} />
+        </span>
+        EzPaper
+      </a>
       <div className="topbar-actions">
         {email ? <span className="user-email">{email}</span> : null}
-        <button className="button secondary" type="button" onClick={handleLogout} title="Sign out">
+        <button className="button secondary" type="button" onClick={handleLogout} title="Đăng xuất">
           <LogOut size={17} />
-          Sign out
+          Đăng xuất
         </button>
       </div>
     </header>

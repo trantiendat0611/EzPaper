@@ -1,5 +1,5 @@
 export function formatDate(value: string): string {
-  return new Intl.DateTimeFormat("en", {
+  return new Intl.DateTimeFormat("vi", {
     dateStyle: "medium",
     timeStyle: "short",
   }).format(new Date(value));
@@ -7,12 +7,12 @@ export function formatDate(value: string): string {
 
 export function getStatusLabel(status: string): string {
   const labels: Record<string, string> = {
-    uploaded: "Uploaded",
-    processing: "Processing",
-    completed: "Extracted",
-    analyzing: "Analyzing",
-    analyzed: "Analyzed",
-    failed: "Failed",
+    uploaded: "Đã tải lên",
+    processing: "Đang xử lý",
+    completed: "Đã trích xuất",
+    analyzing: "Đang phân tích",
+    analyzed: "Đã phân tích",
+    failed: "Thất bại",
   };
 
   return labels[status] ?? status;

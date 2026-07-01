@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { ArrowLeft, Brain, FileText, RefreshCw, Trash2 } from "lucide-react";
+import { ArrowLeft, BookMarked, Brain, CheckCircle2, FileText, Layers, RefreshCw, Trash2 } from "lucide-react";
 import { AppHeader } from "@/components/AppHeader";
 import { analyzePaper, deletePaper, getCurrentUser, getPaper, PaperDetail, User } from "@/lib/api";
 import { getToken } from "@/lib/auth";
@@ -63,7 +63,7 @@ export default function PaperDetailPage() {
       return;
     }
 
-    const confirmed = window.confirm("Delete this paper and its extracted sections?");
+    const confirmed = window.confirm("Xóa bài báo này và các phần đã trích xuất?");
     if (!confirmed) {
       return;
     }
@@ -89,23 +89,23 @@ export default function PaperDetailPage() {
         <div className="toolbar">
           <div>
             <Link className="text-link" href="/dashboard">
-              <ArrowLeft size={16} /> Back
+              <ArrowLeft size={16} /> Quay lại
             </Link>
-            <h1 className="page-title">{paper?.title ?? "Paper"}</h1>
-            {paper ? <p className="page-subtitle">{paper.original_filename} - {formatDate(paper.created_at)}</p> : null}
+            <h1 className="page-title">{paper?.title ?? "Bài báo"}</h1>
+            {paper ? <p className="page-subtitle">{paper.original_filename} · {formatDate(paper.created_at)}</p> : null}
           </div>
           <div className="upload-row">
             {paper ? <span className={`status ${getStatusTone(paper.status)}`}>{getStatusLabel(paper.status)}</span> : null}
-            <button className="button secondary" type="button" onClick={() => void loadData()} title="Refresh">
+            <button className="button secondary" type="button" onClick={() => void loadData()} title="Làm mới">
               <RefreshCw size={17} />
             </button>
             <button className="button" type="button" onClick={handleAnalyze} disabled={!canAnalyze || isAnalyzing}>
               <Brain size={18} />
-              {isAnalyzing ? "Analyzing..." : "Analyze"}
+              {isAnalyzing ? "Đang phân tích..." : "Phân tích"}
             </button>
             <button className="button danger" type="button" onClick={handleDelete} disabled={!paper || isDeleting}>
               <Trash2 size={18} />
-              {isDeleting ? "Deleting..." : "Delete"}
+              {isDeleting ? "Đang xóa..." : "Xóa"}
             </button>
           </div>
         </div>
@@ -113,16 +113,31 @@ export default function PaperDetailPage() {
         {paper ? (
           <div className="stats-grid">
             <div className="stat">
-              <span className="stat-value">{paper.sections.length}</span>
-              <span className="stat-label">Sections</span>
+              <span className="stat-icon">
+                <Layers size={20} />
+              </span>
+              <span className="stat-body">
+                <span className="stat-value">{paper.sections.length}</span>
+                <span className="stat-label">Số phần</span>
+              </span>
             </div>
             <div className="stat">
-              <span className="stat-value">{analyzedSections}</span>
-              <span className="stat-label">Analyzed sections</span>
+              <span className="stat-icon">
+                <CheckCircle2 size={20} />
+              </span>
+              <span className="stat-body">
+                <span className="stat-value">{analyzedSections}</span>
+                <span className="stat-label">Phần đã phân tích</span>
+              </span>
             </div>
             <div className="stat">
-              <span className="stat-value">{paper.abstract ? "Yes" : "No"}</span>
-              <span className="stat-label">Abstract found</span>
+              <span className="stat-icon">
+                <BookMarked size={20} />
+              </span>
+              <span className="stat-body">
+                <span className="stat-value">{paper.abstract ? "Có" : "Không"}</span>
+                <span className="stat-label">Tìm thấy tóm tắt</span>
+              </span>
             </div>
           </div>
         ) : null}
@@ -130,13 +145,13 @@ export default function PaperDetailPage() {
         {error ? <div className="error">{error}</div> : null}
 
         {isLoading ? (
-          <div className="empty-state">Loading...</div>
+          <div className="empty-state">Đang tải...</div>
         ) : !paper ? (
-          <div className="empty-state">Paper not found</div>
+          <div className="empty-state">Không tìm thấy bài báo</div>
         ) : (
           <div className="detail-grid">
             <nav className="section-nav">
-              <div className="section-nav-title">Sections</div>
+              <div className="section-nav-title">Các phần</div>
               {paper.sections.map((section) => (
                 <a href={`#section-${section.id}`} key={section.id}>
                   {section.title}
@@ -145,7 +160,7 @@ export default function PaperDetailPage() {
             </nav>
             <article className="reader">
               {paper.sections.length === 0 ? (
-                <div className="empty-state">No sections</div>
+                <div className="empty-state">Chưa có phần nào</div>
               ) : (
                 paper.sections.map((section) => (
                   <section className="section" id={`section-${section.id}`} key={section.id}>
@@ -155,20 +170,20 @@ export default function PaperDetailPage() {
                     </div>
                     {section.summary_vi ? (
                       <div className="analysis-band">
-                        <span className="analysis-label">Summary</span>
+                        <span className="analysis-label">Tóm tắt</span>
                         <div className="section-text">{section.summary_vi}</div>
                       </div>
                     ) : null}
                     {section.explanation_vi ? (
                       <div className="analysis-band">
-                        <span className="analysis-label">Explanation</span>
+                        <span className="analysis-label">Giải thích</span>
                         <div className="section-text">{section.explanation_vi}</div>
                       </div>
                     ) : null}
                     <div className="source-block">
                       <span className="analysis-label">
                         <FileText size={14} />
-                        Source text
+                        Nội dung gốc
                       </span>
                       <div className="section-text">{section.raw_text}</div>
                     </div>

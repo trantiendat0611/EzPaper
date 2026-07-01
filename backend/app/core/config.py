@@ -13,6 +13,8 @@ class Settings(BaseSettings):
     ai_provider: str = "auto"
     openai_api_key: str = ""
     openai_model: str = "gpt-5.5"
+    gemini_api_key: str = ""
+    gemini_model: str = "gemini-2.5-flash"
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 

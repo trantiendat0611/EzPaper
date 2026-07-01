@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.models.paper import Paper, PaperSection
+from app.services.gemini_analyzer import analyze_section_with_gemini
 from app.services.openai_analyzer import analyze_section_with_openai
 
 SENTENCE_PATTERN = re.compile(r"(?<=[.!?])\s+")
@@ -64,10 +65,20 @@ def build_explanation_vi(section: PaperSection) -> str:
 
 
 def analyze_section(section: PaperSection) -> str:
-    use_openai = settings.ai_provider == "openai" or (
-        settings.ai_provider == "auto" and bool(settings.openai_api_key)
-    )
+    provider = settings.ai_provider
 
+    use_gemini = provider == "gemini" or (provider == "auto" and bool(settings.gemini_api_key))
+    if use_gemini:
+        try:
+            summary_vi, explanation_vi = analyze_section_with_gemini(section)
+            section.summary_vi = summary_vi
+            section.explanation_vi = explanation_vi
+            return "gemini"
+        except Exception:
+            if provider == "gemini":
+                raise
+
+    use_openai = provider == "openai" or (provider == "auto" and bool(settings.openai_api_key))
     if use_openai:
         try:
             summary_vi, explanation_vi = analyze_section_with_openai(section)
@@ -75,7 +86,7 @@ def analyze_section(section: PaperSection) -> str:
             section.explanation_vi = explanation_vi
             return "openai"
         except Exception:
-            if settings.ai_provider == "openai":
+            if provider == "openai":
                 raise
 
     section.summary_vi = build_summary_vi(section)
