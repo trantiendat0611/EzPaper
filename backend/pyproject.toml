@@ -1,0 +1,10 @@
+[tool.ruff]
+line-length = 125
+target-version = "py312"
+extend-exclude = ["alembic/versions"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP"]
+
+[tool.ruff.lint.per-file-ignores]
+"app/models/*.py" = ["F821"]

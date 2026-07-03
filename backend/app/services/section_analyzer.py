@@ -107,5 +107,10 @@ def analyze_paper_sections(db: Session, paper: Paper) -> tuple[Paper, str]:
     db.commit()
     db.refresh(paper)
 
-    provider = "openai" if "openai" in providers_used else "local"
+    if "gemini" in providers_used:
+        provider = "gemini"
+    elif "openai" in providers_used:
+        provider = "openai"
+    else:
+        provider = "local"
     return paper, provider

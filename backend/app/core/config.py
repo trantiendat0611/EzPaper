@@ -10,6 +10,7 @@ class Settings(BaseSettings):
     upload_dir: str = "storage/uploads"
     max_upload_size_mb: int = 25
     backend_cors_origins: str = "http://localhost:3000,http://127.0.0.1:3000"
+    redis_url: str = "redis://localhost:6379/0"
     ai_provider: str = "auto"
     openai_api_key: str = ""
     openai_model: str = "gpt-5.5"

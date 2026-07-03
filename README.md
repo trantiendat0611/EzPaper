@@ -75,6 +75,24 @@ Run the API:
 uvicorn app.main:app --reload
 ```
 
+PDF extraction and AI analysis run as background jobs on Celery (using the Redis
+service from `docker compose`). Start a worker in a separate terminal:
+
+```bash
+celery -A app.core.celery_app worker --loglevel=info
+```
+
+On Windows, add `--pool=solo` if the default worker pool fails to start:
+
+```bash
+celery -A app.core.celery_app worker --loglevel=info --pool=solo
+```
+
+Uploading a paper returns immediately with status `uploaded`; the worker then
+moves it to `processing` and `completed`. Requesting analysis returns status
+`analyzing` and the worker finishes it as `analyzed`. The frontend polls for
+these status changes automatically.
+
 Health checks:
 
 ```txt
@@ -109,13 +127,34 @@ Paper endpoints:
 ```txt
 POST /papers/upload
 GET /papers
+GET /papers/stats
 GET /papers/{paper_id}
 POST /papers/{paper_id}/analyze
+POST /papers/{paper_id}/sections/{section_id}/analyze
+GET /papers/{paper_id}/questions
+POST /papers/{paper_id}/ask
 DELETE /papers/{paper_id}
 ```
 
+`GET /papers` supports `page`, `page_size`, `search`, and `status` query parameters.
+`POST /papers/{paper_id}/ask` answers a free-form question grounded in the paper's
+extracted content using the configured AI provider (Gemini, then OpenAI, then a
+local keyword-retrieval fallback), and stores the Q&A history.
+
 After upload, EzPaper extracts text from text-based PDFs and stores detected sections in `paper_sections`.
 The current analyzer is a local heuristic MVP that fills `summary_vi` and `explanation_vi`; it is designed to be replaced by an AI provider later.
+
+Optional OCR for scanned (image-only) PDFs:
+
+When pypdf extracts too little text, EzPaper falls back to OCR. This needs two
+system binaries installed (in addition to the Python packages in
+`requirements.txt`):
+
+- Tesseract OCR: https://github.com/UB-Mannheim/tesseract/wiki (Windows) or `apt-get install tesseract-ocr` (Linux)
+- Poppler: https://github.com/oschwartz10612/poppler-windows (Windows) or `apt-get install poppler-utils` (Linux)
+
+If either binary is missing, OCR is skipped and the paper is marked `failed`
+when no text could be extracted. Text-based PDFs work without these binaries.
 
 Optional AI-backed analysis (Gemini or OpenAI):
 

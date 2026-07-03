@@ -3,21 +3,50 @@
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { ArrowLeft, BookMarked, Brain, CheckCircle2, FileText, Layers, RefreshCw, Trash2 } from "lucide-react";
+import {
+  ArrowLeft,
+  BookMarked,
+  Brain,
+  CheckCircle2,
+  FileText,
+  Layers,
+  MessageCircleQuestion,
+  RefreshCw,
+  RotateCw,
+  Send,
+  Sparkles,
+  Trash2,
+} from "lucide-react";
 import { AppHeader } from "@/components/AppHeader";
-import { analyzePaper, deletePaper, getCurrentUser, getPaper, PaperDetail, User } from "@/lib/api";
+import { useToast } from "@/components/Toast";
+import {
+  analyzePaper,
+  analyzeSection,
+  askQuestion,
+  deletePaper,
+  getCurrentUser,
+  getPaper,
+  listQuestions,
+  PaperDetail,
+  PaperQuestion,
+  User,
+} from "@/lib/api";
 import { getToken } from "@/lib/auth";
-import { formatDate, getStatusLabel, getStatusTone } from "@/lib/format";
+import { formatDate, getStatusLabel, getStatusTone, isInProgressStatus } from "@/lib/format";
 
 export default function PaperDetailPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
+  const { showToast } = useToast();
   const [user, setUser] = useState<User | null>(null);
   const [paper, setPaper] = useState<PaperDetail | null>(null);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [questions, setQuestions] = useState<PaperQuestion[]>([]);
+  const [questionInput, setQuestionInput] = useState("");
+  const [isAsking, setIsAsking] = useState(false);
 
   async function loadData() {
     setError("");
@@ -26,6 +55,9 @@ export default function PaperDetailPage() {
       const [currentUser, paperDetail] = await Promise.all([getCurrentUser(), getPaper(params.id)]);
       setUser(currentUser);
       setPaper(paperDetail);
+      listQuestions(paperDetail.id)
+        .then(setQuestions)
+        .catch(() => {});
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not load paper");
     } finally {
@@ -41,20 +73,46 @@ export default function PaperDetailPage() {
     void loadData();
   }, [params.id, router]);
 
+  useEffect(() => {
+    if (!paper || !isInProgressStatus(paper.status)) {
+      return;
+    }
+    const interval = setInterval(() => {
+      getPaper(params.id)
+        .then(setPaper)
+        .catch(() => {});
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [paper, params.id]);
+
   async function handleAnalyze() {
     if (!paper) {
       return;
     }
 
     setIsAnalyzing(true);
-    setError("");
     try {
       const analyzed = await analyzePaper(paper.id);
       setPaper(analyzed);
+      showToast("Đang phân tích bài báo...", "info");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Analysis failed");
+      showToast(err instanceof Error ? err.message : "Phân tích thất bại", "error");
     } finally {
       setIsAnalyzing(false);
+    }
+  }
+
+  async function handleRetrySection(sectionId: number) {
+    if (!paper) {
+      return;
+    }
+
+    try {
+      const updated = await analyzeSection(paper.id, sectionId);
+      setPaper(updated);
+      showToast("Đang phân tích lại phần này...", "info");
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : "Phân tích lại thất bại", "error");
     }
   }
 
@@ -69,18 +127,41 @@ export default function PaperDetailPage() {
     }
 
     setIsDeleting(true);
-    setError("");
     try {
       await deletePaper(paper.id);
+      showToast("Đã xóa bài báo", "success");
       router.push("/dashboard");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Delete failed");
+      showToast(err instanceof Error ? err.message : "Xóa thất bại", "error");
       setIsDeleting(false);
+    }
+  }
+
+  async function handleAsk() {
+    if (!paper) {
+      return;
+    }
+
+    const question = questionInput.trim();
+    if (!question) {
+      return;
+    }
+
+    setIsAsking(true);
+    try {
+      const created = await askQuestion(paper.id, question);
+      setQuestions((current) => [...current, created]);
+      setQuestionInput("");
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : "Không trả lời được câu hỏi", "error");
+    } finally {
+      setIsAsking(false);
     }
   }
 
   const analyzedSections = paper?.sections.filter((section) => section.summary_vi && section.explanation_vi).length ?? 0;
   const canAnalyze = Boolean(paper && paper.sections.length > 0 && paper.status !== "analyzing");
+  const canAsk = Boolean(paper && paper.sections.length > 0);
 
   return (
     <main className="app-shell">
@@ -142,10 +223,62 @@ export default function PaperDetailPage() {
           </div>
         ) : null}
 
+        {canAsk ? (
+          <div className="qa-panel">
+            <div className="qa-header">
+              <MessageCircleQuestion size={18} />
+              Hỏi đáp về bài báo
+            </div>
+            <div className="qa-history">
+              {questions.length === 0 ? (
+                <div className="qa-empty">
+                  <Sparkles size={16} />
+                  Đặt câu hỏi bất kỳ về nội dung bài báo, AI sẽ trả lời dựa trên bài báo của bạn.
+                </div>
+              ) : (
+                questions.map((item) => (
+                  <div className="qa-item" key={item.id}>
+                    <div className="qa-question">
+                      <span className="qa-badge">Hỏi</span>
+                      <span>{item.question}</span>
+                    </div>
+                    <div className="qa-answer">{item.answer}</div>
+                  </div>
+                ))
+              )}
+            </div>
+            <form
+              className="qa-form"
+              onSubmit={(event) => {
+                event.preventDefault();
+                void handleAsk();
+              }}
+            >
+              <input
+                className="qa-input"
+                type="text"
+                placeholder="Đặt câu hỏi về bài báo..."
+                value={questionInput}
+                onChange={(event) => setQuestionInput(event.target.value)}
+                disabled={isAsking}
+              />
+              <button className="button" type="submit" disabled={isAsking || !questionInput.trim()}>
+                <Send size={17} />
+                {isAsking ? "Đang hỏi..." : "Gửi"}
+              </button>
+            </form>
+          </div>
+        ) : null}
+
         {error ? <div className="error">{error}</div> : null}
 
         {isLoading ? (
-          <div className="empty-state">Đang tải...</div>
+          <div className="reader">
+            <span className="skeleton skeleton-title" />
+            <span className="skeleton skeleton-line" />
+            <span className="skeleton skeleton-line" />
+            <span className="skeleton skeleton-line short" />
+          </div>
         ) : !paper ? (
           <div className="empty-state">Không tìm thấy bài báo</div>
         ) : (
@@ -166,7 +299,20 @@ export default function PaperDetailPage() {
                   <section className="section" id={`section-${section.id}`} key={section.id}>
                     <div className="section-heading">
                       <h2>{section.title}</h2>
-                      <span className="meta">{section.section_type}</span>
+                      <div className="section-heading-meta">
+                        <span className="meta">{section.section_type}</span>
+                        {!section.summary_vi ? (
+                          <button
+                            className="button secondary button-sm"
+                            type="button"
+                            onClick={() => void handleRetrySection(section.id)}
+                            disabled={paper.status === "analyzing"}
+                          >
+                            <RotateCw size={14} />
+                            Thử lại
+                          </button>
+                        ) : null}
+                      </div>
                     </div>
                     {section.summary_vi ? (
                       <div className="analysis-band">

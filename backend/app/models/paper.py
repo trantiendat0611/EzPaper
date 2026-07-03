@@ -25,6 +25,11 @@ class Paper(Base):
         cascade="all, delete-orphan",
         order_by="PaperSection.order_index",
     )
+    questions: Mapped[list["PaperQuestion"]] = relationship(
+        back_populates="paper",
+        cascade="all, delete-orphan",
+        order_by="PaperQuestion.created_at",
+    )
 
 
 class PaperSection(Base):
@@ -42,3 +47,16 @@ class PaperSection(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
     paper: Mapped[Paper] = relationship(back_populates="sections")
+
+
+class PaperQuestion(Base):
+    __tablename__ = "paper_questions"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    paper_id: Mapped[int] = mapped_column(ForeignKey("papers.id", ondelete="CASCADE"), index=True)
+    question: Mapped[str] = mapped_column(Text)
+    answer: Mapped[str] = mapped_column(Text)
+    provider: Mapped[str] = mapped_column(String(50))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    paper: Mapped[Paper] = relationship(back_populates="questions")

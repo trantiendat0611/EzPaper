@@ -5,6 +5,7 @@ from google.genai import types
 
 from app.core.config import settings
 from app.models.paper import PaperSection
+from app.services.qa_prompts import QA_SYSTEM_INSTRUCTIONS, build_qa_input
 
 SYSTEM_INSTRUCTIONS = """
 You help Vietnamese beginners understand scientific papers.
@@ -56,6 +57,20 @@ def analyze_section_with_gemini(section: PaperSection) -> tuple[str, str]:
         raise ValueError("Gemini response did not include the required analysis fields")
 
     return summary_vi, explanation_vi
+
+
+def answer_question_with_gemini(context: str, question: str) -> str:
+    client = _get_client()
+    response = client.models.generate_content(
+        model=settings.gemini_model,
+        contents=build_qa_input(context, question),
+        config=types.GenerateContentConfig(system_instruction=QA_SYSTEM_INSTRUCTIONS),
+    )
+
+    answer = response.text.strip()
+    if not answer:
+        raise ValueError("Gemini returned an empty answer")
+    return answer
 
 
 def check_gemini_connection() -> str:

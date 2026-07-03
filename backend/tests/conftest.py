@@ -7,11 +7,13 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
+import app.tasks as tasks_module
 from app.api.deps import get_db
+from app.core.celery_app import celery_app
 from app.core.config import settings
+from app.core.limiter import limiter
 from app.db.base import Base
 from app.main import app
-from app.models import Paper, PaperSection, User
 
 
 @pytest.fixture()
@@ -31,6 +33,13 @@ def client() -> Generator[TestClient, None, None]:
     settings.upload_dir = str(Path("storage") / "test-uploads")
     settings.ai_provider = "local"
     settings.openai_api_key = ""
+    limiter.enabled = False
+
+    # Run Celery tasks synchronously and route their sessions to the test database.
+    celery_app.conf.task_always_eager = True
+    celery_app.conf.task_eager_propagates = True
+    old_task_session_local = tasks_module.SessionLocal
+    tasks_module.SessionLocal = testing_session_local
 
     def override_get_db() -> Generator[Session, None, None]:
         db = testing_session_local()
@@ -48,6 +57,8 @@ def client() -> Generator[TestClient, None, None]:
     settings.upload_dir = old_upload_dir
     settings.ai_provider = old_ai_provider
     settings.openai_api_key = old_openai_api_key
+    celery_app.conf.task_always_eager = False
+    tasks_module.SessionLocal = old_task_session_local
     Base.metadata.drop_all(bind=engine)
 
 

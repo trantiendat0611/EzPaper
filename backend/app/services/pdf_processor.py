@@ -1,5 +1,5 @@
-from pathlib import Path
 import re
+from pathlib import Path
 
 from pypdf import PdfReader
 from sqlalchemy.orm import Session
@@ -31,6 +31,10 @@ HEADING_PATTERN = re.compile(
     re.IGNORECASE,
 )
 
+# Below this length the pypdf output is treated as a likely image-only (scanned)
+# PDF, and OCR is attempted as a fallback.
+OCR_MIN_TEXT_LENGTH = 200
+
 
 def extract_text_from_pdf(file_path: Path) -> str:
     reader = PdfReader(str(file_path))
@@ -38,6 +42,36 @@ def extract_text_from_pdf(file_path: Path) -> str:
 
     for page in reader.pages:
         text = page.extract_text() or ""
+        if text.strip():
+            page_texts.append(text.strip())
+
+    return "\n\n".join(page_texts).strip()
+
+
+def extract_text_with_ocr(file_path: Path) -> str:
+    """OCR a scanned (image-only) PDF.
+
+    Requires the pytesseract/pdf2image packages plus the Tesseract OCR and
+    Poppler system binaries. Returns an empty string if any of those are
+    missing so the caller can degrade gracefully.
+    """
+    try:
+        import pytesseract
+        from pdf2image import convert_from_path
+    except ImportError:
+        return ""
+
+    try:
+        images = convert_from_path(str(file_path))
+    except Exception:
+        return ""
+
+    page_texts: list[str] = []
+    for image in images:
+        try:
+            text = pytesseract.image_to_string(image)
+        except Exception:
+            return ""
         if text.strip():
             page_texts.append(text.strip())
 
@@ -96,6 +130,11 @@ def process_uploaded_pdf(db: Session, paper: Paper, file_path: Path) -> Paper:
 
     try:
         extracted_text = extract_text_from_pdf(file_path)
+        if len(extracted_text) < OCR_MIN_TEXT_LENGTH:
+            ocr_text = extract_text_with_ocr(file_path)
+            if len(ocr_text) > len(extracted_text):
+                extracted_text = ocr_text
+
         if not extracted_text:
             paper.status = "failed"
             db.commit()

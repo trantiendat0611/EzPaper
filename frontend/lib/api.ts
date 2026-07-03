@@ -98,9 +98,38 @@ export async function getCurrentUser(): Promise<User> {
   return request<User>("/auth/me");
 }
 
-export async function listPapers(): Promise<Paper[]> {
-  const data = await request<{ items: Paper[] }>("/papers");
-  return data.items;
+export type PaperListParams = {
+  page?: number;
+  pageSize?: number;
+  search?: string;
+  status?: string;
+};
+
+export type PaperListResult = {
+  items: Paper[];
+  total: number;
+};
+
+export type PaperStats = {
+  total: number;
+  extracted: number;
+  analyzed: number;
+};
+
+export async function getPaperStats(): Promise<PaperStats> {
+  return request<PaperStats>("/papers/stats");
+}
+
+export async function listPapers(params: PaperListParams = {}): Promise<PaperListResult> {
+  const query = new URLSearchParams();
+  if (params.page) query.set("page", String(params.page));
+  if (params.pageSize) query.set("page_size", String(params.pageSize));
+  if (params.search) query.set("search", params.search);
+  if (params.status) query.set("status", params.status);
+
+  const queryString = query.toString();
+  const path = queryString ? `/papers?${queryString}` : "/papers";
+  return request<PaperListResult>(path);
 }
 
 export async function uploadPaper(file: File): Promise<Paper> {
@@ -122,8 +151,33 @@ export async function analyzePaper(id: number): Promise<PaperDetail> {
   });
 }
 
+export async function analyzeSection(paperId: number, sectionId: number): Promise<PaperDetail> {
+  return request<PaperDetail>(`/papers/${paperId}/sections/${sectionId}/analyze`, {
+    method: "POST",
+  });
+}
+
 export async function deletePaper(id: number): Promise<void> {
   return request<void>(`/papers/${id}`, {
     method: "DELETE",
+  });
+}
+
+export type PaperQuestion = {
+  id: number;
+  question: string;
+  answer: string;
+  provider: string;
+  created_at: string;
+};
+
+export async function listQuestions(paperId: number): Promise<PaperQuestion[]> {
+  return request<PaperQuestion[]>(`/papers/${paperId}/questions`);
+}
+
+export async function askQuestion(paperId: number, question: string): Promise<PaperQuestion> {
+  return request<PaperQuestion>(`/papers/${paperId}/ask`, {
+    method: "POST",
+    body: JSON.stringify({ question }),
   });
 }

@@ -1,9 +1,10 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, get_db
+from app.core.limiter import limiter
 from app.core.security import create_access_token, get_password_hash, verify_password
 from app.models.user import User
 from app.schemas.auth import Token
@@ -34,7 +35,8 @@ def register_user(payload: UserCreate, db: Session = Depends(get_db)) -> User:
 
 
 @router.post("/login", response_model=Token)
-def login_user(payload: UserLogin, db: Session = Depends(get_db)) -> Token:
+@limiter.limit("5/minute")
+def login_user(request: Request, payload: UserLogin, db: Session = Depends(get_db)) -> Token:
     user = db.scalar(select(User).where(User.email == payload.email.lower()))
     if user is None or not verify_password(payload.password, user.hashed_password):
         raise HTTPException(
@@ -48,7 +50,9 @@ def login_user(payload: UserLogin, db: Session = Depends(get_db)) -> Token:
 
 
 @router.post("/token", response_model=Token)
+@limiter.limit("5/minute")
 def issue_swagger_token(
+    request: Request,
     form_data: OAuth2PasswordRequestForm = Depends(),
     db: Session = Depends(get_db),
 ) -> Token:

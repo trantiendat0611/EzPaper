@@ -7,9 +7,13 @@ psycopg[binary]
 python-dotenv
 python-multipart
 pypdf
+pytesseract
+pdf2image
 passlib[bcrypt]
 bcrypt==4.0.1
 python-jose[cryptography]
 alembic
 openai
 google-genai
+slowapi
+celery[redis]

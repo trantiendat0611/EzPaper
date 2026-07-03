@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class PaperRead(BaseModel):
@@ -17,6 +17,13 @@ class PaperRead(BaseModel):
 
 class PaperList(BaseModel):
     items: list[PaperRead]
+    total: int
+
+
+class PaperStats(BaseModel):
+    total: int
+    extracted: int
+    analyzed: int
 
 
 class PaperSectionRead(BaseModel):
@@ -37,5 +44,15 @@ class PaperDetail(PaperRead):
     sections: list[PaperSectionRead]
 
 
-class PaperAnalysisResult(PaperDetail):
-    analysis_provider: str
+class PaperQuestionCreate(BaseModel):
+    question: str = Field(min_length=1, max_length=1000)
+
+
+class PaperQuestionRead(BaseModel):
+    id: int
+    question: str
+    answer: str
+    provider: str
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)

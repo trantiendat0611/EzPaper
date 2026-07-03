@@ -4,6 +4,7 @@ from openai import OpenAI
 
 from app.core.config import settings
 from app.models.paper import PaperSection
+from app.services.qa_prompts import QA_SYSTEM_INSTRUCTIONS, build_qa_input
 
 SYSTEM_INSTRUCTIONS = """
 You help Vietnamese beginners understand scientific papers.
@@ -48,6 +49,20 @@ def analyze_section_with_openai(section: PaperSection) -> tuple[str, str]:
         raise ValueError("OpenAI response did not include the required analysis fields")
 
     return summary_vi, explanation_vi
+
+
+def answer_question_with_openai(context: str, question: str) -> str:
+    client = OpenAI(api_key=settings.openai_api_key)
+    response = client.responses.create(
+        model=settings.openai_model,
+        instructions=QA_SYSTEM_INSTRUCTIONS,
+        input=build_qa_input(context, question),
+    )
+
+    answer = response.output_text.strip()
+    if not answer:
+        raise ValueError("OpenAI returned an empty answer")
+    return answer
 
 
 def check_openai_connection() -> str:

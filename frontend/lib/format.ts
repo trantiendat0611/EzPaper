@@ -18,12 +18,16 @@ export function getStatusLabel(status: string): string {
   return labels[status] ?? status;
 }
 
+export function isInProgressStatus(status: string): boolean {
+  return status === "uploaded" || status === "processing" || status === "analyzing";
+}
+
 export function getStatusTone(status: string): string {
   if (status === "failed") {
     return "danger";
   }
 
-  if (status === "uploaded" || status === "processing" || status === "analyzing") {
+  if (isInProgressStatus(status)) {
     return "pending";
   }
 
