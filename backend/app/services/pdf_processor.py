@@ -24,10 +24,12 @@ SECTION_ALIASES = {
     "references": "references",
 }
 
+# Accepts optional numbering ("2", "3.1", "IV") and an optional trailing
+# colon/period, e.g. "Abstract:", "1 Introduction", "IV. Results".
 HEADING_PATTERN = re.compile(
-    r"^\s*(?:\d+(?:\.\d+)*\.?\s+)?("
+    r"^\s*(?:(?:\d+(?:\.\d+)*|[IVXLC]+)\.?\s+)?("
     + "|".join(re.escape(heading) for heading in SECTION_ALIASES)
-    + r")\s*$",
+    + r")\s*[:.]?\s*$",
     re.IGNORECASE,
 )
 

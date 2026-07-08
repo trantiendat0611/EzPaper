@@ -93,7 +93,16 @@ async def upload_paper(
     db.commit()
     db.refresh(paper)
 
-    process_pdf_task.delay(paper.id, str(destination))
+    try:
+        process_pdf_task.delay(paper.id, str(destination))
+    except Exception as exc:
+        paper.status = "failed"
+        db.commit()
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Background processing is unavailable. Please try again later.",
+        ) from exc
+
     db.refresh(paper)
 
     return paper
@@ -177,7 +186,17 @@ def analyze_paper(
     paper.status = "analyzing"
     db.commit()
 
-    analyze_paper_task.delay(paper.id)
+    try:
+        analyze_paper_task.delay(paper.id)
+    except Exception as exc:
+        db.rollback()
+        paper.status = "failed"
+        db.commit()
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Analysis could not be started. Please try again later.",
+        ) from exc
+
     db.refresh(paper)
 
     return paper
@@ -211,7 +230,17 @@ def analyze_single_section(
     paper.status = "analyzing"
     db.commit()
 
-    analyze_section_task.delay(section.id)
+    try:
+        analyze_section_task.delay(section.id)
+    except Exception as exc:
+        db.rollback()
+        paper.status = "failed"
+        db.commit()
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Analysis could not be started. Please try again later.",
+        ) from exc
+
     db.refresh(paper)
 
     return paper

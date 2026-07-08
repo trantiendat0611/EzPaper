@@ -184,6 +184,50 @@ def test_paper_stats(
     assert body["analyzed"] == 0
 
 
+def test_upload_returns_503_and_marks_failed_when_broker_down(
+    client: TestClient,
+    auth_headers: dict[str, str],
+    monkeypatch,
+) -> None:
+    from app.tasks import process_pdf_task
+
+    def broken_delay(*args, **kwargs):
+        raise ConnectionError("broker unavailable")
+
+    monkeypatch.setattr(process_pdf_task, "delay", broken_delay)
+
+    pdf_bytes = pdf_bytes_with_text(["Abstract", "Broker outage test."])
+    upload = client.post(
+        "/papers/upload",
+        headers=auth_headers,
+        files={"file": ("outage.pdf", pdf_bytes, "application/pdf")},
+    )
+    assert upload.status_code == 503
+
+    papers = client.get("/papers", headers=auth_headers).json()["items"]
+    assert len(papers) == 1
+    assert papers[0]["status"] == "failed"
+
+
+def test_analysis_failure_marks_paper_failed(
+    client: TestClient,
+    auth_headers: dict[str, str],
+    monkeypatch,
+) -> None:
+    paper_id = _upload_named_paper(client, auth_headers, "analysis-crash")
+
+    def broken_analysis(db, paper):
+        raise RuntimeError("provider exploded")
+
+    monkeypatch.setattr("app.tasks.analyze_paper_sections", broken_analysis)
+
+    analysis = client.post(f"/papers/{paper_id}/analyze", headers=auth_headers)
+    assert analysis.status_code == 503
+
+    detail = client.get(f"/papers/{paper_id}", headers=auth_headers)
+    assert detail.json()["status"] == "failed"
+
+
 def test_retry_single_section_analysis(
     client: TestClient,
     auth_headers: dict[str, str],

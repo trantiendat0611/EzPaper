@@ -26,7 +26,14 @@ def analyze_paper_task(paper_id: int) -> None:
         paper = db.get(Paper, paper_id)
         if paper is None:
             return
-        analyze_paper_sections(db, paper)
+        try:
+            analyze_paper_sections(db, paper)
+        except Exception:
+            # Never leave the paper stuck in "analyzing"; the user can retry.
+            db.rollback()
+            paper.status = "failed"
+            db.commit()
+            raise
     finally:
         db.close()
 
@@ -39,8 +46,14 @@ def analyze_section_task(section_id: int) -> None:
         if section is None:
             return
         paper = section.paper
-        analyze_section(section)
-        paper.status = "analyzed"
-        db.commit()
+        try:
+            analyze_section(section)
+            paper.status = "analyzed"
+            db.commit()
+        except Exception:
+            db.rollback()
+            paper.status = "failed"
+            db.commit()
+            raise
     finally:
         db.close()

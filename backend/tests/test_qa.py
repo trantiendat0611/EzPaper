@@ -59,6 +59,27 @@ def test_ask_question_rejects_empty(
     assert ask.status_code == 422
 
 
+def test_unhandled_error_returns_json_500(
+    client: TestClient,
+    auth_headers: dict[str, str],
+    monkeypatch,
+) -> None:
+    paper_id = _upload_paper(client, auth_headers)
+
+    def broken_answer(paper, question):
+        raise RuntimeError("unexpected crash")
+
+    monkeypatch.setattr("app.api.routes.papers.answer_question", broken_answer)
+
+    ask = client.post(
+        f"/papers/{paper_id}/ask",
+        headers=auth_headers,
+        json={"question": "Does this crash gracefully?"},
+    )
+    assert ask.status_code == 500
+    assert ask.json() == {"detail": "Internal server error"}
+
+
 def test_ask_question_requires_ownership(
     client: TestClient,
     auth_headers: dict[str, str],

@@ -14,7 +14,8 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 
 
 @router.post("/register", response_model=UserRead, status_code=status.HTTP_201_CREATED)
-def register_user(payload: UserCreate, db: Session = Depends(get_db)) -> User:
+@limiter.limit("5/minute")
+def register_user(request: Request, payload: UserCreate, db: Session = Depends(get_db)) -> User:
     existing_user = db.scalar(select(User).where(User.email == payload.email.lower()))
     if existing_user is not None:
         raise HTTPException(

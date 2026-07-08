@@ -372,9 +372,31 @@ a {
   background: var(--surface);
   border: 1.5px solid var(--line);
   border-radius: var(--radius-sm);
+  color: var(--muted);
+  font-size: 13px;
   max-width: 260px;
   min-height: 44px;
-  padding: 0 10px;
+  padding: 7px 10px;
+}
+
+.file-input::file-selector-button {
+  background: var(--surface-muted);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+  color: var(--ink-soft);
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  margin-right: 10px;
+  padding: 5px 14px;
+  transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
+}
+
+.file-input::file-selector-button:hover {
+  background: var(--primary-soft);
+  border-color: var(--primary-light);
+  color: var(--primary-dark);
 }
 
 .grid {
@@ -607,6 +629,12 @@ a {
   font-size: 15px;
   line-height: 1.7;
   white-space: pre-wrap;
+}
+
+/* Raw PDF text is full of hard line breaks from extraction; letting it flow
+   as prose reads far better than preserving every ragged break. */
+.source-block .section-text {
+  white-space: normal;
 }
 
 .empty-state {

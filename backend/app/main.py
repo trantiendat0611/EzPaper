@@ -1,7 +1,8 @@
 import logging
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
@@ -24,6 +25,20 @@ app = FastAPI(title=settings.app_name)
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 app.add_middleware(SlowAPIMiddleware)
+
+
+# Convert unhandled errors into JSON 500s inside the middleware stack. Without
+# this, Starlette's default 500 bypasses CORSMiddleware (no CORS headers), so
+# browsers report an opaque "Failed to fetch" instead of a readable error.
+# CORSMiddleware must stay registered after this so it remains outermost.
+@app.middleware("http")
+async def unhandled_error_to_json(request: Request, call_next):
+    try:
+        return await call_next(request)
+    except Exception:
+        logger.exception("Unhandled error on %s %s", request.method, request.url.path)
+        return JSONResponse(status_code=500, content={"detail": "Internal server error"})
+
 
 app.add_middleware(
     CORSMiddleware,

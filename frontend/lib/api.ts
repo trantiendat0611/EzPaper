@@ -57,8 +57,12 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
     headers,
   });
 
-  if (response.status === 401) {
+  if (response.status === 401 && options.auth !== false) {
+    // Session expired: clear the stale token and send the user back to login.
     clearToken();
+    if (typeof window !== "undefined" && !window.location.pathname.startsWith("/login")) {
+      window.location.href = "/login";
+    }
   }
 
   if (!response.ok) {
