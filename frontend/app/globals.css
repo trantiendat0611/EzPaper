@@ -23,6 +23,10 @@
   --pending-ink: #b4650a;
   --danger-bg: #fdecec;
   --danger-ink: #d33a3a;
+  --danger-border: #fbd0d0;
+
+  --topbar-bg: rgba(255, 255, 255, 0.85);
+  --brand-ink: #1e3a8a;
 
   --gradient-primary: linear-gradient(135deg, #7c6bf5 0%, #4f8ff0 100%);
   --gradient-soft: linear-gradient(160deg, #f3f0ff 0%, #eaf1ff 55%, #f6f7fc 100%);
@@ -181,6 +185,12 @@ a {
   margin: 0 0 8px;
 }
 
+/* Brand text uses a theme-aware ink: navy on the light bar, soft indigo on
+   the dark bar — readable and on-brand in both themes. */
+.topbar .brand {
+  color: var(--brand-ink);
+}
+
 .brand-mark {
   align-items: center;
   background: var(--gradient-primary);
@@ -308,7 +318,7 @@ a {
 
 .error {
   background: var(--danger-bg);
-  border: 1px solid #fbd0d0;
+  border: 1px solid var(--danger-border);
   border-radius: var(--radius-sm);
   color: var(--danger-ink);
   font-size: 14px;
@@ -324,7 +334,7 @@ a {
 
 .topbar {
   align-items: center;
-  background: rgba(246, 247, 252, 0.82);
+  background: var(--topbar-bg);
   backdrop-filter: blur(10px);
   border-bottom: 1px solid var(--line);
   display: flex;
@@ -352,6 +362,11 @@ a {
   margin: 0 auto;
   max-width: 1180px;
   padding: 36px 24px 64px;
+}
+
+/* The paper reader benefits from using most of the screen width. */
+.container-wide {
+  max-width: min(1760px, 95vw);
 }
 
 .toolbar {
@@ -514,8 +529,17 @@ a {
 
 .detail-grid {
   display: grid;
-  gap: 20px;
-  grid-template-columns: 280px 1fr;
+  gap: 0;
+  grid-template-columns: 260px 12px minmax(0, 1fr);
+  align-items: stretch;
+}
+
+.detail-divider {
+  align-items: center;
+  cursor: col-resize;
+  display: flex;
+  justify-content: center;
+  touch-action: none;
 }
 
 .section-nav,
@@ -542,21 +566,36 @@ a {
   padding: 14px 16px;
 }
 
-.section-nav a {
+.section-nav button {
+  background: transparent;
+  border: none;
   border-bottom: 1px solid var(--line);
+  border-left: 3px solid transparent;
+  color: var(--ink-soft);
+  cursor: pointer;
   display: block;
+  font: inherit;
   font-size: 14px;
   font-weight: 500;
-  padding: 13px 16px;
-  transition: background 0.15s ease, color 0.15s ease;
+  padding: 13px 16px 13px 13px;
+  text-align: left;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+  width: 100%;
 }
 
-.section-nav a:hover {
+.section-nav button:hover {
   background: var(--primary-soft);
   color: var(--primary-dark);
 }
 
-.section-nav a:last-child {
+.section-nav button.active {
+  background: var(--primary-soft);
+  border-left-color: var(--primary);
+  color: var(--primary-dark);
+  font-weight: 700;
+}
+
+.section-nav button:last-child {
   border-bottom: 0;
 }
 
@@ -566,19 +605,49 @@ a {
   padding: 22px;
 }
 
-.section {
-  border-bottom: 1px solid var(--line);
+.section-split {
+  display: grid;
+  gap: 0;
+  grid-template-columns: 1fr 12px 1fr;
+  align-items: stretch;
+}
+
+.section-pane {
   display: grid;
   gap: 14px;
-  padding-bottom: 22px;
 }
 
-.section:last-child {
-  border-bottom: 0;
-  padding-bottom: 0;
+.section-pane-scroll {
+  /* Larger reading area; each pane scrolls on its own. */
+  max-height: calc(100vh - 180px);
+  min-height: 460px;
+  min-width: 0;
+  overflow-y: auto;
+  padding-right: 6px;
 }
 
-.section h2 {
+.section-divider {
+  align-items: center;
+  cursor: col-resize;
+  display: flex;
+  justify-content: center;
+  touch-action: none;
+}
+
+.section-divider-grip {
+  background: var(--line);
+  border-radius: var(--radius-pill);
+  height: 46px;
+  transition: background 0.15s ease;
+  width: 4px;
+}
+
+.section-divider:hover .section-divider-grip,
+.section-divider:active .section-divider-grip {
+  background: var(--primary);
+}
+
+.section-heading h2 {
   font-size: 20px;
   font-weight: 700;
   letter-spacing: -0.01em;
@@ -614,10 +683,9 @@ a {
 }
 
 .source-block {
-  border-top: 1px solid var(--line);
   display: grid;
   gap: 10px;
-  padding-top: 14px;
+  grid-auto-rows: min-content;
 }
 
 .source-block .analysis-label {
@@ -629,6 +697,10 @@ a {
   font-size: 15px;
   line-height: 1.7;
   white-space: pre-wrap;
+  /* PDF extraction can produce very long unbroken tokens; wrap them instead
+     of forcing a horizontal scrollbar. */
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 /* Raw PDF text is full of hard line breaks from extraction; letting it flow
@@ -967,6 +1039,14 @@ a {
     grid-template-columns: 1fr;
   }
 
+  .topbar {
+    padding: 0 16px;
+  }
+
+  .user-email {
+    display: none;
+  }
+
   .auth-visual {
     display: none;
   }
@@ -982,7 +1062,11 @@ a {
   }
 
   .detail-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr !important;
+  }
+
+  .detail-divider {
+    display: none;
   }
 
   .stats-grid {
@@ -991,6 +1075,19 @@ a {
 
   .section-nav {
     position: static;
+  }
+
+  .section-split {
+    grid-template-columns: 1fr !important;
+  }
+
+  .section-divider {
+    display: none;
+  }
+
+  .section-pane-scroll {
+    max-height: none;
+    min-height: 0;
   }
 
   .filter-bar {
@@ -1035,6 +1132,10 @@ a {
     --pending-ink: #fbbf5a;
     --danger-bg: #2c1719;
     --danger-ink: #f87171;
+    --danger-border: #4a2427;
+
+    --topbar-bg: rgba(22, 25, 34, 0.82);
+    --brand-ink: #a5b4fc;
 
     --gradient-soft: linear-gradient(160deg, #1c1830 0%, #161d2e 55%, #0f1117 100%);
 

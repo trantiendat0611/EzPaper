@@ -5,40 +5,15 @@ from openai import OpenAI
 from app.core.config import settings
 from app.models.paper import PaperSection
 from app.services.qa_prompts import QA_SYSTEM_INSTRUCTIONS, build_qa_input
-
-SYSTEM_INSTRUCTIONS = """
-You help Vietnamese beginners understand scientific papers.
-Analyze only the provided section text. Do not invent details.
-Return compact Vietnamese that is clear, practical, and grounded in the section.
-Return valid JSON with exactly these string keys: summary_vi, explanation_vi.
-"""
-
-
-def _build_prompt(section: PaperSection) -> str:
-    section_text = section.raw_text[:8000]
-    return f"""
-Paper section title: {section.title}
-Section type: {section.section_type}
-
-Section text:
-{section_text}
-
-Task:
-1. summary_vi: Summarize the section in Vietnamese in 2-4 concise sentences.
-2. explanation_vi: Explain the section in Vietnamese for a beginner learning programming or AI.
-3. If the section is References, say it is mainly citation material and avoid over-explaining.
-4. If information is missing, say that the section does not provide enough information.
-
-Return JSON only.
-"""
+from app.services.section_prompts import SECTION_SYSTEM_INSTRUCTIONS, build_section_prompt
 
 
 def analyze_section_with_openai(section: PaperSection) -> tuple[str, str]:
     client = OpenAI(api_key=settings.openai_api_key)
     response = client.responses.create(
         model=settings.openai_model,
-        instructions=SYSTEM_INSTRUCTIONS,
-        input=_build_prompt(section),
+        instructions=SECTION_SYSTEM_INSTRUCTIONS,
+        input=build_section_prompt(section),
     )
 
     data = json.loads(response.output_text)

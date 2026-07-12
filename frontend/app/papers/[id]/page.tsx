@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ArrowLeft,
   BookMarked,
@@ -47,6 +47,12 @@ export default function PaperDetailPage() {
   const [questions, setQuestions] = useState<PaperQuestion[]>([]);
   const [questionInput, setQuestionInput] = useState("");
   const [isAsking, setIsAsking] = useState(false);
+  const [activeSectionId, setActiveSectionId] = useState<number | null>(null);
+  const [splitRatio, setSplitRatio] = useState(0.5);
+  const [navWidth, setNavWidth] = useState(260);
+  const splitRef = useRef<HTMLDivElement>(null);
+  const gridRef = useRef<HTMLDivElement>(null);
+  const draggingRef = useRef<"split" | "nav" | null>(null);
 
   async function loadData() {
     setError("");
@@ -84,6 +90,52 @@ export default function PaperDetailPage() {
     }, 3000);
     return () => clearInterval(interval);
   }, [paper, params.id]);
+
+  useEffect(() => {
+    if (!paper) {
+      return;
+    }
+    setActiveSectionId((current) => {
+      if (current !== null && paper.sections.some((section) => section.id === current)) {
+        return current;
+      }
+      return paper.sections[0]?.id ?? null;
+    });
+  }, [paper]);
+
+  useEffect(() => {
+    function handleMouseMove(event: MouseEvent) {
+      if (draggingRef.current === "split" && splitRef.current) {
+        const rect = splitRef.current.getBoundingClientRect();
+        const ratio = (event.clientX - rect.left) / rect.width;
+        setSplitRatio(Math.min(0.8, Math.max(0.2, ratio)));
+      } else if (draggingRef.current === "nav" && gridRef.current) {
+        const rect = gridRef.current.getBoundingClientRect();
+        const width = event.clientX - rect.left;
+        setNavWidth(Math.min(460, Math.max(180, width)));
+      }
+    }
+    function stopDragging() {
+      if (!draggingRef.current) {
+        return;
+      }
+      draggingRef.current = null;
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+    }
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", stopDragging);
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", stopDragging);
+    };
+  }, []);
+
+  function startDragging(target: "split" | "nav") {
+    draggingRef.current = target;
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
+  }
 
   async function handleAnalyze() {
     if (!paper) {
@@ -162,11 +214,12 @@ export default function PaperDetailPage() {
   const analyzedSections = paper?.sections.filter((section) => section.summary_vi && section.explanation_vi).length ?? 0;
   const canAnalyze = Boolean(paper && paper.sections.length > 0 && paper.status !== "analyzing");
   const canAsk = Boolean(paper && paper.sections.length > 0);
+  const activeSection = paper?.sections.find((section) => section.id === activeSectionId) ?? null;
 
   return (
     <main className="app-shell">
       <AppHeader email={user?.email} />
-      <section className="container">
+      <section className="container container-wide">
         <div className="toolbar">
           <div>
             <Link className="text-link" href="/dashboard">
@@ -282,60 +335,98 @@ export default function PaperDetailPage() {
         ) : !paper ? (
           <div className="empty-state">Không tìm thấy bài báo</div>
         ) : (
-          <div className="detail-grid">
+          <div
+            className="detail-grid"
+            ref={gridRef}
+            style={{ gridTemplateColumns: `${navWidth}px 12px minmax(0, 1fr)` }}
+          >
             <nav className="section-nav">
               <div className="section-nav-title">Các phần</div>
               {paper.sections.map((section) => (
-                <a href={`#section-${section.id}`} key={section.id}>
+                <button
+                  key={section.id}
+                  type="button"
+                  className={section.id === activeSectionId ? "active" : ""}
+                  onClick={() => setActiveSectionId(section.id)}
+                >
                   {section.title}
-                </a>
+                </button>
               ))}
             </nav>
+            <div
+              className="detail-divider"
+              role="separator"
+              aria-orientation="vertical"
+              onMouseDown={() => startDragging("nav")}
+              title="Kéo để chỉnh độ rộng danh sách phần"
+            >
+              <span className="section-divider-grip" />
+            </div>
             <article className="reader">
               {paper.sections.length === 0 ? (
                 <div className="empty-state">Chưa có phần nào</div>
-              ) : (
-                paper.sections.map((section) => (
-                  <section className="section" id={`section-${section.id}`} key={section.id}>
-                    <div className="section-heading">
-                      <h2>{section.title}</h2>
-                      <div className="section-heading-meta">
-                        <span className="meta">{section.section_type}</span>
-                        {!section.summary_vi ? (
-                          <button
-                            className="button secondary button-sm"
-                            type="button"
-                            onClick={() => void handleRetrySection(section.id)}
-                            disabled={paper.status === "analyzing"}
-                          >
-                            <RotateCw size={14} />
-                            Thử lại
-                          </button>
-                        ) : null}
-                      </div>
+              ) : activeSection ? (
+                <>
+                  <div className="section-heading">
+                    <h2>{activeSection.title}</h2>
+                    <div className="section-heading-meta">
+                      <span className="meta">{activeSection.section_type}</span>
+                      {!activeSection.summary_vi ? (
+                        <button
+                          className="button secondary button-sm"
+                          type="button"
+                          onClick={() => void handleRetrySection(activeSection.id)}
+                          disabled={paper.status === "analyzing"}
+                        >
+                          <RotateCw size={14} />
+                          Thử lại
+                        </button>
+                      ) : null}
                     </div>
-                    {section.summary_vi ? (
-                      <div className="analysis-band">
-                        <span className="analysis-label">Tóm tắt</span>
-                        <div className="section-text">{section.summary_vi}</div>
-                      </div>
-                    ) : null}
-                    {section.explanation_vi ? (
-                      <div className="analysis-band">
-                        <span className="analysis-label">Giải thích</span>
-                        <div className="section-text">{section.explanation_vi}</div>
-                      </div>
-                    ) : null}
-                    <div className="source-block">
+                  </div>
+                  <div
+                    className="section-split"
+                    ref={splitRef}
+                    style={{ gridTemplateColumns: `${splitRatio}fr 12px ${1 - splitRatio}fr` }}
+                  >
+                    <div className="section-pane section-pane-scroll">
+                      {activeSection.summary_vi ? (
+                        <div className="analysis-band">
+                          <span className="analysis-label">Tóm tắt</span>
+                          <div className="section-text">{activeSection.summary_vi}</div>
+                        </div>
+                      ) : null}
+                      {activeSection.explanation_vi ? (
+                        <div className="analysis-band">
+                          <span className="analysis-label">Giải thích</span>
+                          <div className="section-text">{activeSection.explanation_vi}</div>
+                        </div>
+                      ) : null}
+                      {!activeSection.summary_vi && !activeSection.explanation_vi ? (
+                        <div className="empty-state">
+                          Phần này chưa được phân tích. Bấm &quot;Phân tích&quot; hoặc &quot;Thử lại&quot;.
+                        </div>
+                      ) : null}
+                    </div>
+                    <div
+                      className="section-divider"
+                      role="separator"
+                      aria-orientation="vertical"
+                      onMouseDown={() => startDragging("split")}
+                      title="Kéo để chỉnh độ rộng"
+                    >
+                      <span className="section-divider-grip" />
+                    </div>
+                    <div className="source-block section-pane-scroll">
                       <span className="analysis-label">
                         <FileText size={14} />
                         Nội dung gốc
                       </span>
-                      <div className="section-text">{section.raw_text}</div>
+                      <div className="section-text">{activeSection.raw_text}</div>
                     </div>
-                  </section>
-                ))
-              )}
+                  </div>
+                </>
+              ) : null}
             </article>
           </div>
         )}
